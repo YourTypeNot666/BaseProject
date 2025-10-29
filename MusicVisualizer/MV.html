@@ -10,15 +10,15 @@
     body {
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      background: #000000; /* Solid black background */
       font-family: system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
     }
     
     /* Canvas styling */
     #visualizer {
       display: block;
-      background: rgba(15, 23, 42, 0.5);
-      border-radius: 12px;
+      background: #000000; /* Solid black for canvas too */
       box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
     }
     
@@ -69,672 +69,118 @@
     .playlist-scroll::-webkit-scrollbar-thumb:hover {
       background: rgba(59, 130, 246, 0.7);
     }
+
+    /* Glow effects for circle visualization */
+    .glow {
+      filter: drop-shadow(0 0 10px currentColor) drop-shadow(0 0 20px currentColor);
+    }
   </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen">
   
-  <div class="w-full max-w-6xl">
-    <!-- Header -->
-    <div class="text-center mb-8">
-      <h1 class="text-5xl font-bold text-white mb-2 text-balance">Music Visualizer</h1>
-      <p class="text-slate-400 text-lg">Upload audio and watch it come to life</p>
-    </div>
+  <!-- Canvas for visualization -->
+  <canvas id="visualizer" class="w-full h-screen"></canvas>
+    
+  <!-- 🔹 Hamburger Menu Icon -->
+  <button id="menuBtn" class="fixed top-4 right-4 z-50 p-2 bg-slate-800 rounded-lg hover:bg-slate-700 transition">
+    <!-- 3 lines -->
+    <div class="w-6 h-0.5 bg-white mb-1"></div>
+    <div class="w-6 h-0.5 bg-white mb-1"></div>
+    <div class="w-6 h-0.5 bg-white"></div>
+  </button>
 
-    <!-- Main Container with Grid Layout for Playlist -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Visualizer Section (Left - Takes 2 columns) -->
-      <div class="lg:col-span-2 bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-slate-700">
-        
-        <!-- Canvas for visualization -->
-        <canvas id="visualizer" class="w-full mb-6" width="1000" height="400"></canvas>
-        
-        <!-- Controls Section -->
-        <div class="space-y-4">
-          
-          <!-- File Upload with Folder Support -->
-          <div class="flex flex-col sm:flex-row gap-4 items-center justify-center">
-            <label class="cursor-pointer bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl">
-              <input type="file" id="audioFile" accept="audio/*" class="hidden">
-              Upload Single File
-            </label>
-            
-            <label class="cursor-pointer bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl">
-              <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
-              Upload Folder
-            </label>
-          </div>
+  <!-- 🔹 Popup Section -->
+  <div id="popupMenu" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-end hidden z-40">
+    <div class="w-64  bg-slate-900 h-full p-2 flex flex-col text-white shadow-xl transform translate-x-full transition-transform duration-300" id="popupContent">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-semibold">Menu</h2>
+        <button id="closeBtn" class="text-2xl hover:text-red-400">✖️</button>
+      </div>
 
-          <!-- Now Playing Display -->
-          <div class="text-center">
-            <div class="text-slate-400 text-sm mb-1">Now Playing</div>
-            <div class="text-white font-semibold text-lg" id="nowPlaying">No song selected</div>
-          </div>
+      <!-- Main Container with Grid Layout for Playlist -->
+      <div class="flex-1 overflow-y-hidden">
+        <!-- Visualizer Section -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-slate-700 mb-6">
+          <!-- Controls Section -->
+          <div class="space-y-4">
+            <!-- File Upload with Folder Support -->
+            <div class="flex flex-col gap-4">
+              <label class="cursor-pointer bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl text-center">
+                <input type="file" id="audioFile" accept="audio/*" class="hidden">
+                Upload Single File
+              </label>
+              
+              <label class="cursor-pointer bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-600 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl text-center">
+                <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
+                Upload Folder
+              </label>
+            </div>
 
-          <!-- Audio Controls with Previous/Next -->
-          <div class="flex items-center gap-3 justify-center flex-wrap">
-            <button id="prevBtn" class="bg-slate-600 hover:bg-slate-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-              ⏮️ Previous
-            </button>
-            
-            <button id="playPause" class="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-              ▶️ Play
-            </button>
-            
-            <button id="nextBtn" class="bg-slate-600 hover:bg-slate-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-              ⏭️ Next
-            </button>
-            
-            <div class="flex items-center gap-2">
-              <span class="text-slate-400 text-sm">🔊</span>
-              <input type="range" id="volume" min="0" max="100" value="50" class="w-32 h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer">
-              <span class="text-slate-300 text-sm w-12" id="volumeDisplay">50%</span>
+            <!-- Now Playing Display -->
+            <div class="text-center">
+              <div class="text-slate-400 text-sm mb-1">Now Playing</div>
+              <div class="text-white font-semibold text-lg truncate" id="nowPlaying">No song selected</div>
+            </div>
+
+            <!-- Audio Controls with Previous/Next -->
+            <div class="flex flex-col gap-3">
+              <div class="flex gap-2 justify-center">
+                <button id="prevBtn" class="flex-1 bg-slate-600 hover:bg-slate-500 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                  ⏮️
+                </button>
+                
+                <button id="playPause" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                  ▶️ Play
+                </button>
+                
+                <button id="nextBtn" class="flex-1 bg-slate-600 hover:bg-slate-500 text-white px-4 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                  ⏭️
+                </button>
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400 text-sm">🔊</span>
+                <input type="range" id="volume" min="0" max="100" value="50" class="flex-1 h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer">
+                <span class="text-slate-300 text-sm w-12" id="volumeDisplay">50%</span>
+              </div>
+            </div>
+
+            <!-- Visualization Mode Buttons -->
+            <div class="grid grid-cols-2 gap-2">
+              <button class="mode-btn active bg-slate-700 text-white px-4 py-2 rounded-lg font-medium" data-mode="bars">
+                Bars
+              </button>
+              <button class="mode-btn bg-slate-700 text-white px-4 py-2 rounded-lg font-medium" data-mode="waveform">
+                Waveform
+              </button>
+              <button class="mode-btn bg-slate-700 text-white px-4 py-2 rounded-lg font-medium" data-mode="circle">
+                Circle
+              </button>
+              <button class="mode-btn bg-slate-700 text-white px-4 py-2 rounded-lg font-medium" data-mode="particles">
+                Particles
+              </button>
             </div>
           </div>
+        </div>
 
-          <!-- Visualization Mode Buttons -->
-          <div class="flex flex-wrap gap-3 justify-center">
-            <button class="mode-btn active bg-slate-700 text-white px-6 py-2 rounded-lg font-medium" data-mode="bars">
-              Bars
-            </button>
-            <button class="mode-btn bg-slate-700 text-white px-6 py-2 rounded-lg font-medium" data-mode="waveform">
-              Waveform
-            </button>
-            <button class="mode-btn bg-slate-700 text-white px-6 py-2 rounded-lg font-medium" data-mode="circle">
-              Circle
-            </button>
-            <button class="mode-btn bg-slate-700 text-white px-6 py-2 rounded-lg font-medium" data-mode="particles">
-              Particles
-            </button>
-          </div>
-
-          <!-- Educational Info -->
-          <div class="mt-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-            <h3 class="text-blue-400 font-semibold mb-2">How This Works:</h3>
-            <p class="text-slate-300 text-sm leading-relaxed">
-              This visualizer uses the <strong>Web Audio API</strong> to analyze audio frequencies in real-time. 
-              The <code class="bg-slate-800 px-1 rounded">AnalyserNode</code> extracts frequency data, 
-              which is then drawn on an HTML5 <code class="bg-slate-800 px-1 rounded">Canvas</code> using different visualization algorithms.
-            </p>
+        <!-- Playlist Section -->
+        <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-slate-700">
+          <h2 class="text-white font-bold text-xl mb-4 flex items-center gap-2">
+            <span>🎵</span>
+            <span>Playlist</span>
+            <span class="text-sm text-slate-400 font-normal" id="playlistCount">(0 songs)</span>
+          </h2>
+          
+          <div id="playlist" class="space-y-2 max-h-64 overflow-y-auto playlist-scroll pr-2">
+            <div class="text-slate-400 text-center py-8 text-sm">
+              Upload songs to see your playlist here
+            </div>
           </div>
         </div>
       </div>
-
-      <!-- Playlist Section (Right - Takes 1 column) -->
-      <div class="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-slate-700">
-        <h2 class="text-white font-bold text-xl mb-4 flex items-center gap-2">
-          <span>🎵</span>
-          <span>Playlist</span>
-          <span class="text-sm text-slate-400 font-normal" id="playlistCount">(0 songs)</span>
-        </h2>
-        
-        <div id="playlist" class="space-y-2 max-h-[600px] overflow-y-auto playlist-scroll pr-2">
-          <div class="text-slate-400 text-center py-8 text-sm">
-            Upload songs to see your playlist here
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Learning Resources -->
-    <div class="mt-6 text-center text-slate-400 text-sm">
-      <p>Check the JavaScript code comments to learn how each part works!</p>
     </div>
   </div>
 
-  <script>
-    // ============================================
-    // STEP 1: SET UP VARIABLES AND GET DOM ELEMENTS
-    // ============================================
-    
-    // Get references to all HTML elements we'll interact with
-    const canvas = document.getElementById('visualizer');
-    const ctx = canvas.getContext('2d'); // 2D drawing context for the canvas
-    const audioFileInput = document.getElementById('audioFile');
-    const folderInput = document.getElementById('folderInput'); // Folder input
-    const playPauseBtn = document.getElementById('playPause');
-    const prevBtn = document.getElementById('prevBtn'); // Previous button
-    const nextBtn = document.getElementById('nextBtn'); // Next button
-    const volumeSlider = document.getElementById('volume');
-    const volumeDisplay = document.getElementById('volumeDisplay'); // Volume display
-    const nowPlayingDisplay = document.getElementById('nowPlaying'); // Now playing display
-    const playlistElement = document.getElementById('playlist'); // Playlist container
-    const playlistCount = document.getElementById('playlistCount'); // Playlist count
-    const modeButtons = document.querySelectorAll('.mode-btn');
-
-    // Audio-related variables
-    let audioContext; // The main audio processing context
-    let analyser; // Analyser node for frequency analysis
-    let audioSource; // Source node for our audio
-    let audioElement = new Audio(); // HTML5 audio element
-    let dataArray; // Array to store frequency data
-    let bufferLength; // Length of the frequency data array
-    let isPlaying = false; // Track play/pause state
-    let currentMode = 'bars'; // Current visualization mode
-    let particles = []; // Array for particle mode
-    
-    let playlist = []; // Array to store all songs
-    let currentSongIndex = 0; // Index of currently playing song
-
-    // ============================================
-    // STEP 2: INITIALIZE WEB AUDIO API
-    // ============================================
-    
-    /**
-     * This function sets up the Web Audio API components
-     * CONCEPT: Web Audio API uses a node-based system where audio flows through connected nodes
-     */
-    function initAudio() {
-      // Create an AudioContext - this is the main audio processing environment
-      // Think of it as a factory that creates and connects audio nodes
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      
-      // Create an AnalyserNode - this extracts frequency and time-domain data from audio
-      // CONCEPT: The analyser doesn't change the audio, it just reads it
-      analyser = audioContext.createAnalyser();
-      
-      // FFT (Fast Fourier Transform) size determines frequency resolution
-      // Higher = more detailed but slower. Must be power of 2 (256, 512, 1024, 2048, etc.)
-      analyser.fftSize = 256;
-      
-      // bufferLength is half of fftSize (Nyquist frequency)
-      // This is how many frequency "bins" we get
-      bufferLength = analyser.frequencyBinCount;
-      
-      // Create a Uint8Array to hold the frequency data (values 0-255)
-      dataArray = new Uint8Array(bufferLength);
-      
-      // Create a source node from our audio element
-      // CONCEPT: This connects the HTML5 audio to the Web Audio API
-      audioSource = audioContext.createMediaElementSource(audioElement);
-      
-      // Connect the audio flow: source → analyser → destination (speakers)
-      // CONCEPT: Audio flows through connected nodes like water through pipes
-      audioSource.connect(analyser);
-      analyser.connect(audioContext.destination);
-      
-      console.log('[v0] Audio API initialized! Buffer length:', bufferLength);
-    }
-
-    // ============================================
-    // ============================================
-    
-    /**
-     * Handle single file upload
-     * CONCEPT: FileReader API allows reading files from user's computer
-     */
-    audioFileInput.addEventListener('change', function(e) {
-      const file = e.target.files[0];
-      
-      if (file && file.type.startsWith('audio/')) {
-        // Clear existing playlist and add single file
-        playlist = [file];
-        currentSongIndex = 0;
-        updatePlaylistUI();
-        loadSong(0);
-      }
-    });
-
-    /**
-     * Handle folder upload
-     * CONCEPT: webkitdirectory attribute allows selecting entire folders
-     * This gives us access to all files in the folder
-     */
-    folderInput.addEventListener('change', function(e) {
-      const files = Array.from(e.target.files);
-      
-      // Filter only audio files
-      // CONCEPT: MIME types starting with 'audio/' are audio files
-      const audioFiles = files.filter(file => file.type.startsWith('audio/'));
-      
-      if (audioFiles.length > 0) {
-        // Sort files alphabetically by name
-        audioFiles.sort((a, b) => a.name.localeCompare(b.name));
-        
-        playlist = audioFiles;
-        currentSongIndex = 0;
-        updatePlaylistUI();
-        loadSong(0);
-        
-        console.log('[v0] Loaded', audioFiles.length, 'songs from folder');
-      } else {
-        alert('No audio files found in the selected folder!');
-      }
-    });
-
-    /**
-     * Load a specific song from the playlist
-     * CONCEPT: URL.createObjectURL creates a temporary URL for the file
-     * This allows the browser to play it without uploading to a server
-     */
-    function loadSong(index) {
-      if (index < 0 || index >= playlist.length) return;
-      
-      const file = playlist[index];
-      currentSongIndex = index;
-      
-      // Create URL for the file
-      const fileURL = URL.createObjectURL(file);
-      
-      // Set as audio source
-      audioElement.src = fileURL;
-      
-      // Initialize audio API if not already done
-      if (!audioContext) {
-        initAudio();
-      }
-      
-      // Update UI
-      nowPlayingDisplay.textContent = file.name;
-      updatePlaylistUI();
-      
-      // Enable controls
-      playPauseBtn.disabled = false;
-      prevBtn.disabled = currentSongIndex === 0;
-      nextBtn.disabled = currentSongIndex === playlist.length - 1;
-      
-      // Auto-play if something was already playing
-      if (isPlaying) {
-        audioElement.play();
-      }
-      
-      console.log('[v0] Loaded song:', file.name);
-    }
-
-    /**
-     * Update the playlist UI to show all songs
-     * CONCEPT: DOM manipulation - creating HTML elements dynamically
-     */
-    function updatePlaylistUI() {
-      if (playlist.length === 0) {
-        playlistElement.innerHTML = `
-          <div class="text-slate-400 text-center py-8 text-sm">
-            Upload songs to see your playlist here
-          </div>
-        `;
-        playlistCount.textContent = '(0 songs)';
-        return;
-      }
-      
-      // Update count
-      playlistCount.textContent = `(${playlist.length} songs)`;
-      
-      // Clear playlist
-      playlistElement.innerHTML = '';
-      
-      // Add each song to the playlist
-      playlist.forEach((file, index) => {
-        const item = document.createElement('div');
-        item.className = `playlist-item p-3 rounded-lg cursor-pointer ${index === currentSongIndex ? 'active' : 'bg-slate-700/30'}`;
-        
-        item.innerHTML = `
-          <div class="flex items-center gap-3">
-            <div class="text-blue-400 font-bold text-sm w-6">${index + 1}</div>
-            <div class="flex-1 min-w-0">
-              <div class="text-white text-sm font-medium truncate">${file.name}</div>
-              <div class="text-slate-400 text-xs">${formatFileSize(file.size)}</div>
-            </div>
-            ${index === currentSongIndex && isPlaying ? '<div class="text-blue-400">▶️</div>' : ''}
-          </div>
-        `;
-        
-        // Click to play this song
-        item.addEventListener('click', () => {
-          loadSong(index);
-          if (!isPlaying) {
-            playPauseBtn.click();
-          }
-        });
-        
-        playlistElement.appendChild(item);
-      });
-    }
-
-    /**
-     * Format file size for display
-     * CONCEPT: Converting bytes to human-readable format
-     */
-    function formatFileSize(bytes) {
-      if (bytes < 1024) return bytes + ' B';
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-
-    // ============================================
-    // ============================================
-    
-    playPauseBtn.addEventListener('click', function() {
-      if (isPlaying) {
-        audioElement.pause();
-        playPauseBtn.textContent = '▶️ Play';
-        isPlaying = false;
-      } else {
-        audioElement.play();
-        playPauseBtn.textContent = '⏸️ Pause';
-        isPlaying = true;
-        
-        // Start the visualization loop
-        visualize();
-      }
-      updatePlaylistUI();
-    });
-
-    /**
-     * Previous song button
-     * CONCEPT: Decrement index and load previous song
-     */
-    prevBtn.addEventListener('click', function() {
-      if (currentSongIndex > 0) {
-        loadSong(currentSongIndex - 1);
-        if (isPlaying) {
-          audioElement.play();
-        }
-      }
-    });
-
-    /**
-     * Next song button
-     * CONCEPT: Increment index and load next song
-     */
-    nextBtn.addEventListener('click', function() {
-      if (currentSongIndex < playlist.length - 1) {
-        loadSong(currentSongIndex + 1);
-        if (isPlaying) {
-          audioElement.play();
-        }
-      }
-    });
-
-    /**
-     * Auto-play next song when current song ends
-     * CONCEPT: 'ended' event fires when audio finishes playing
-     */
-    audioElement.addEventListener('ended', function() {
-      if (currentSongIndex < playlist.length - 1) {
-        // Play next song
-        nextBtn.click();
-      } else {
-        // End of playlist
-        isPlaying = false;
-        playPauseBtn.textContent = '▶️ Play';
-        updatePlaylistUI();
-      }
-    });
-
-    // ============================================
-    // STEP 5: VOLUME CONTROL
-    // ============================================
-    
-    volumeSlider.addEventListener('input', function(e) {
-      const volume = e.target.value / 100; // Convert 0-100 to 0-1
-      audioElement.volume = volume;
-      
-      // Update volume display
-      volumeDisplay.textContent = e.target.value + '%';
-    });
-
-    // ============================================
-    // STEP 6: VISUALIZATION MODE SWITCHING
-    // ============================================
-    
-    modeButtons.forEach(btn => {
-      btn.addEventListener('click', function() {
-        // Remove active class from all buttons
-        modeButtons.forEach(b => b.classList.remove('active'));
-        
-        // Add active class to clicked button
-        this.classList.add('active');
-        
-        // Update current mode
-        currentMode = this.dataset.mode;
-        
-        // Reset particles when switching to particle mode
-        if (currentMode === 'particles') {
-          initParticles();
-        }
-        
-        console.log('[v0] Visualization mode changed to:', currentMode);
-      });
-    });
-
-    // ============================================
-    // STEP 7: MAIN VISUALIZATION LOOP
-    // ============================================
-    
-    /**
-     * This function runs continuously while audio is playing
-     * CONCEPT: requestAnimationFrame creates a smooth 60fps animation loop
-     */
-    function visualize() {
-      if (!isPlaying) return; // Stop if paused
-      
-      // Request next frame - this creates the animation loop
-      requestAnimationFrame(visualize);
-      
-      // Get current frequency data from the analyser
-      // CONCEPT: This fills dataArray with current frequency values (0-255)
-      analyser.getByteFrequencyData(dataArray);
-      
-      // Clear the canvas for the next frame
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.3)'; // Semi-transparent for trail effect
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw based on current mode
-      switch(currentMode) {
-        case 'bars':
-          drawBars();
-          break;
-        case 'waveform':
-          drawWaveform();
-          break;
-        case 'circle':
-          drawCircle();
-          break;
-        case 'particles':
-          drawParticles();
-          break;
-      }
-    }
-
-    // ============================================
-    // STEP 8: BARS VISUALIZATION
-    // ============================================
-    
-    /**
-     * Classic frequency bars visualization
-     * CONCEPT: Each bar represents a frequency range, height = amplitude
-     */
-    function drawBars() {
-      const barWidth = (canvas.width / bufferLength) * 2.5;
-      let x = 0;
-      
-      // Loop through each frequency bin
-      for (let i = 0; i < bufferLength; i++) {
-        // Get frequency value (0-255)
-        const barHeight = (dataArray[i] / 255) * canvas.height;
-        
-        // Create gradient color based on frequency
-        // Low frequencies = blue, high frequencies = purple/pink
-        const hue = (i / bufferLength) * 360;
-        ctx.fillStyle = `hsl(${200 + hue * 0.5}, 80%, 60%)`;
-        
-        // Draw the bar from bottom up
-        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-        
-        // Move to next bar position
-        x += barWidth + 1;
-      }
-    }
-
-    // ============================================
-    // STEP 9: WAVEFORM VISUALIZATION
-    // ============================================
-    
-    /**
-     * Smooth waveform visualization
-     * CONCEPT: Connects frequency points with lines to show audio shape
-     */
-    function drawWaveform() {
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#3b82f6';
-      ctx.beginPath();
-      
-      const sliceWidth = canvas.width / bufferLength;
-      let x = 0;
-      
-      for (let i = 0; i < bufferLength; i++) {
-        // Map frequency value to canvas height
-        const y = (dataArray[i] / 255) * canvas.height;
-        
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-        
-        x += sliceWidth;
-      }
-      
-      ctx.stroke();
-      
-      // Add glow effect
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = '#3b82f6';
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-
-    // ============================================
-    // STEP 10: CIRCULAR VISUALIZATION
-    // ============================================
-    
-    /**
-     * Circular frequency visualization
-     * CONCEPT: Frequencies radiate from center in a circle
-     */
-    function drawCircle() {
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const radius = 80;
-      
-      for (let i = 0; i < bufferLength; i++) {
-        // Calculate angle for this frequency
-        const angle = (i / bufferLength) * Math.PI * 2;
-        
-        // Calculate bar length based on frequency amplitude
-        const barLength = (dataArray[i] / 255) * 150;
-        
-        // Calculate start and end points
-        const x1 = centerX + Math.cos(angle) * radius;
-        const y1 = centerY + Math.sin(angle) * radius;
-        const x2 = centerX + Math.cos(angle) * (radius + barLength);
-        const y2 = centerY + Math.sin(angle) * (radius + barLength);
-        
-        // Color based on frequency
-        const hue = (i / bufferLength) * 360;
-        ctx.strokeStyle = `hsl(${hue}, 80%, 60%)`;
-        ctx.lineWidth = 2;
-        
-        // Draw line from center outward
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-      
-      // Draw center circle
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.3)';
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // ============================================
-    // STEP 11: PARTICLE VISUALIZATION
-    // ============================================
-    
-    /**
-     * Particle system that reacts to audio
-     * CONCEPT: Particles move and change based on frequency data
-     */
-    
-    // Particle class definition
-    class Particle {
-      constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.size = Math.random() * 3 + 1;
-        this.speedX = Math.random() * 2 - 1;
-        this.speedY = Math.random() * 2 - 1;
-        this.hue = Math.random() * 360;
-      }
-      
-      update(audioData) {
-        // Move particle
-        this.x += this.speedX;
-        this.y += this.speedY;
-        
-        // Bounce off edges
-        if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-        if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
-        
-        // React to audio - size changes with amplitude
-        const avgAmplitude = audioData.reduce((a, b) => a + b) / audioData.length;
-        this.size = (avgAmplitude / 255) * 5 + 1;
-      }
-      
-      draw() {
-        ctx.fillStyle = `hsla(${this.hue}, 80%, 60%, 0.8)`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    
-    function initParticles() {
-      particles = [];
-      for (let i = 0; i < 100; i++) {
-        particles.push(new Particle());
-      }
-    }
-    
-    function drawParticles() {
-      particles.forEach(particle => {
-        particle.update(dataArray);
-        particle.draw();
-      });
-      
-      // Draw connections between nearby particles
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          
-          if (distance < 100) {
-            ctx.strokeStyle = `rgba(59, 130, 246, ${1 - distance / 100})`;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
-        }
-      }
-    }
-
-
-    // Make canvas responsive to window size
-    function resizeCanvas() {
-      const container = canvas.parentElement;
-      canvas.width = container.offsetWidth - 48; // Account for padding
-      canvas.height = 400;
-    }
-    
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-  </script>
-
+  <script src="Mv.js"></script>
 </body>
 </html>
